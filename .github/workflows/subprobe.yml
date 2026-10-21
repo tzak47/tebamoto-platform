@@ -1,0 +1,27 @@
+name: subprobe
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: mint and exchange
+        run: |
+          IDT=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api%3A%2F%2FAzureADTokenExchange" \
+            | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          python3 - "$IDT" <<'PY'
+          import base64,json,sys
+          p=sys.argv[1].split('.')[1]; p+='='*(-len(p)%4)
+          c=json.loads(base64.urlsafe_b64decode(p))
+          print("FULL CLAIMS:", json.dumps(c, indent=1))
+          PY
+          echo "=== AAD exchange (expect failure, we want the error code) ==="
+          curl -sS -X POST "https://login.microsoftonline.com/3205c325-06a5-4171-9ce8-ffc5e6c2845e/oauth2/v2.0/token" \
+            -d "client_id=72ff278a-9e71-43ec-bac4-2ca303f8e462" \
+            -d "scope=https://vault.azure.net/.default" \
+            -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+            -d "client_assertion=${IDT}" -d "grant_type=client_credentials" | head -c 1200
